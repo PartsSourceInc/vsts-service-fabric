@@ -1,45 +1,44 @@
 [CmdletBinding()]
-PARAM()
+PARAM(
+    [Parameter(Mandatory=$true)][String] $connectedServiceEndpoint,
+    [Parameter(Mandatory=$true)][String] $packagePath,
+    [Parameter()][String] $versionMode,
+    [Parameter(HelpMessage="ApplicationVersion?")][String] $applicationVersion,
+    [Parameter(HelpMessage="ServiceVersion?")][String] $serviceVersion,
+    [Parameter(Mandatory=$true, HelpMessage="CodePackageMode?")][String] $codePackageMode,
+    [Parameter(Mandatory=$true, HelpMessage="ConfigPackageMode?")][String] $configPackageMode,
+    [Parameter(Mandatory=$true, HelpMessage="DataPackageMode?")][String] $dataPackageMode,
+    [Parameter(HelpMessage="CodePackageVersion?")][String] $codePackageVersion,
+    [Parameter(HelpMessage="ConfigPackageVersion?")][String] $configPackageVersion,
+    [Parameter(HelpMessage="DataPackageVersion?")][String] $dataPackageVersion,
+    [Parameter(HelpMessage="HashAlgorithm?")][String] $hashAlgorithm,
+    [Parameter(Mandatory=$true, HelpMessage="HashExcludes?")][String] $hashExcludes,
+    [Parameter(Mandatory=$true, HelpMessage="DifferentialPackage?")][String] $differentialPackage
+)
 
-Trace-VstsEnteringInvocation $MyInvocation
-try
-{
     . "$PSScriptRoot/Update-ServiceFabricApplicationPackageVersions.ps1"
     . "$PSScriptRoot/Get-ServiceFabricApplicationPackageVersions.ps1"
-
-    $packagePath = Get-VstsInput -Name PackagePath -Require
     
-    $DifferentialPackage = Get-VstsInput -Name DifferentialPackage
-    if ($DifferentialPackage -eq 'true')
+    if ($differentialPackage -eq 'true')
     {
-        Import-Module $PSScriptRoot\ps_modules\ServiceFabricHelpers
-
-        $serviceConnectionName = Get-VstsInput -Name ServiceConnectionName -Require
-        $connectedServiceEndpoint = Get-VstsEndpoint -Name $serviceConnectionName -Require
-        $clusterConnectionParameters = @{}
-        Connect-ServiceFabricClusterFromServiceEndpoint -ClusterConnectionParameters $clusterConnectionParameters -ConnectedServiceEndpoint $connectedServiceEndpoint
+        Connect-ServiceFabricCluster -ConnectionEndpoint localhost:19000
 
         $applicationManifestPath = [IO.Path]::Combine($packagePath, 'ApplicationManifest.xml')
         $applicationManifest = [xml](Get-Content $applicationManifestPath)
         $versions = Get-ServiceFabricApplicationPackageVersions -ApplicationTypeName $applicationManifest.ApplicationManifest.ApplicationTypeName
     }
-    
+
     Update-ServiceFabricApplicationPackageVersions `
         -PackagePath $packagePath `
-		-VersionMode (Get-VstsInput -Name VersionMode -Require) `
-        -ApplicationVersion (Get-VstsInput -Name ApplicationVersion -Require) `
-        -ServiceVersion (Get-VstsInput -Name ServiceVersion -Require) `
-        -CodePackageHash:((Get-VstsInput -Name CodePackageMode -Require) -eq 'Hash') `
-        -ConfigPackageHash:((Get-VstsInput -Name ConfigPackageMode -Require) -eq 'Hash') `
-        -DataPackageHash:((Get-VstsInput -Name DataPackageMode -Require) -eq 'Hash') `
-        -CodePackageVersion (Get-VstsInput -Name CodePackageVersion) `
-        -ConfigPackageVersion (Get-VstsInput -Name ConfigPackageVersion) `
-        -DataPackageVersion (Get-VstsInput -Name DataPackageVersion) `
+		-VersionMode $versionMode `
+        -ApplicationVersion $applicationVersion `
+        -ServiceVersion $serviceVersion `
+        -CodePackageHash:($codePackageMode -eq 'Hash') `
+        -ConfigPackageHash:($configPackageMode -eq 'Hash') `
+        -DataPackageHash:($dataPackageMode -eq 'Hash') `
+        -CodePackageVersion $codePackageVersion `
+        -ConfigPackageVersion $configPackageVersion `
+        -DataPackageVersion $dataPackageVersion `
         -DiffPackageVersions $versions `
-        -HashAlgorithm (Get-VstsInput -Name HashAlgorithm -Require) `
-        -HashExcludes (Get-VstsInput -Name HashExcludes -Require).Split(';')
-}
-finally
-{
-    Trace-VstsLeavingInvocation $MyInvocation
-}
+        -HashAlgorithm $hashAlgorithm `
+        -HashExcludes $hashExcludes.Split(';')
