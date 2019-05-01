@@ -1,6 +1,6 @@
 [CmdletBinding()]
 PARAM(
-    [Parameter(Mandatory=$true)][String] $connectedServiceEndpoint,
+    [Parameter(Mandatory=$true)][String] $connectionEndpoint,
     [Parameter(Mandatory=$true)][String] $packagePath,
     [Parameter()][String] $versionMode,
     [Parameter(HelpMessage="ApplicationVersion?")][String] $applicationVersion,
@@ -21,7 +21,7 @@ PARAM(
     
     if ($differentialPackage -eq 'true')
     {
-        Connect-ServiceFabricCluster -ConnectionEndpoint localhost:19000
+        Connect-ServiceFabricCluster -ConnectionEndpoint ${connectionEndpoint}:19000 -WindowsCredential
 
         $applicationManifestPath = [IO.Path]::Combine($packagePath, 'ApplicationManifest.xml')
         $applicationManifest = [xml](Get-Content $applicationManifestPath)
