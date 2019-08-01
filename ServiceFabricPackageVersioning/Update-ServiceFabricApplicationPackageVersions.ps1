@@ -13,9 +13,6 @@
         [string] $ApplicationVersion,
 
         [Parameter()]
-        [string] $ServiceVersion,
-
-        [Parameter()]
         [string] $CodePackageVersion,
 
         [Parameter()]
@@ -37,7 +34,7 @@
         [hashtable] $DiffPackageVersions,
 
         [Parameter()]
-        [ValidateSet('SHA1','SHA256','SHA384')]
+        [ValidateSet('SHA1','SHA256','SHA384','MD5')]
         [string] $HashAlgorithm = 'SHA1',
 
         [Parameter()]
@@ -51,7 +48,7 @@
     function HashDirectory([string] $Path)
     {
         $hasher = [Security.Cryptography.HashAlgorithm]::Create($HashAlgorithm)
-        foreach ($file in (Get-ChildItem $Path -Recurse -Exclude $HashExcludes -File))
+        foreach ($file in (Get-ChildItem $Path -Recurse -Directory | ?{ $_.fullname -notmatch "\\clidriver\\?" } | Get-ChildItem -File -Exclude $HashExcludes))
         {
             $buffer = [array]::CreateInstance([byte], 1024)
             $stream = [IO.File]::OpenRead($file.FullName)
@@ -109,6 +106,7 @@
             {
                 $currentHash = HashDirectory $innerPackagePath
                 $Version = $currentHash
+                $script:ServiceVersion = "$ServiceVersion$Version"
             }
             
 			if ($Version)
@@ -132,7 +130,7 @@
 			if ($removed -ne '' -or $newVersion -ne $oldVersion)
 			{
 				$element.Version = $newVersion
-				Write-Output ($rowFormatString -f "    $PackageType $packageName", "    $oldVersion", "    $newVersion $removed")
+				Write-Host ($rowFormatString -f "    $PackageType $packageName", "    $oldVersion", "    $newVersion $removed")
 			}
         }
     }
@@ -152,8 +150,8 @@
         $oldApplicationVersion = $appManifest.ApplicationManifest.ApplicationTypeVersion
         $newApplicationVersion = GetVersion $oldApplicationVersion $ApplicationVersion
         $appManifest.ApplicationManifest.ApplicationTypeVersion = $newApplicationVersion
-        Write-Output ($rowFormatString -f "Application $($appManifest.ApplicationManifest.ApplicationTypeName)", $oldApplicationVersion, $newApplicationVersion)
-        Write-Output ''
+        Write-Host ($rowFormatString -f "Application $($appManifest.ApplicationManifest.ApplicationTypeName)", $oldApplicationVersion, $newApplicationVersion)
+        Write-Host ''
     }
 
     if ($DiffPackageVersions -eq $null)
@@ -174,20 +172,17 @@
 
         $serviceManifest = [xml] (Get-Content $serviceManifestPath)
 
-        if ($ServiceVersion -ne $null -and $ServiceVersion -ne '')
-        {
-            $oldServiceVersion = $serviceRef.ServiceManifestVersion
-            $newServiceVersion = GetVersion $oldServiceVersion $ServiceVersion
-            $serviceRef.ServiceManifestVersion = $newServiceVersion
-            $serviceManifest.ServiceManifest.Version = $newServiceVersion
-            Write-Output ($rowFormatString -f "  Service $serviceManifestName", "  $oldServiceVersion", "  $newServiceVersion")
-        }
-        
+        $script:ServiceVersion = '';
         UpdatePackageVersion 'CodePackage' $serviceManifest $CodePackageVersion $CodePackageHash
         UpdatePackageVersion 'ConfigPackage' $serviceManifest $ConfigPackageVersion $ConfigPackageHash
         UpdatePackageVersion 'DataPackage' $serviceManifest $DataPackageVersion $DataPackageHash
-
-        Write-Output ''
+ 
+        $oldServiceVersion = $serviceRef.ServiceManifestVersion
+        $newServiceVersion = GetVersion $oldServiceVersion $ServiceVersion
+        $serviceRef.ServiceManifestVersion = $newServiceVersion
+        $serviceManifest.ServiceManifest.Version = $newServiceVersion
+        Write-Host ($rowFormatString -f "  Service $serviceManifestName", "  $oldServiceVersion", "  $newServiceVersion")
+        Write-Host ''
 
         $serviceManifest.Save($serviceManifestPath)
     }

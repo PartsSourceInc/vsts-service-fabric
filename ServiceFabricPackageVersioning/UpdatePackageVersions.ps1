@@ -4,7 +4,6 @@ PARAM(
     [Parameter(Mandatory=$true)][String] $packagePath,
     [Parameter()][String] $versionMode,
     [Parameter(HelpMessage="ApplicationVersion?")][String] $applicationVersion,
-    [Parameter(HelpMessage="ServiceVersion?")][String] $serviceVersion,
     [Parameter(Mandatory=$true, HelpMessage="CodePackageMode?")][String] $codePackageMode,
     [Parameter(Mandatory=$true, HelpMessage="ConfigPackageMode?")][String] $configPackageMode,
     [Parameter(Mandatory=$true, HelpMessage="DataPackageMode?")][String] $dataPackageMode,
@@ -32,7 +31,6 @@ PARAM(
         -PackagePath $packagePath `
 		-VersionMode $versionMode `
         -ApplicationVersion $applicationVersion `
-        -ServiceVersion $serviceVersion `
         -CodePackageHash:($codePackageMode -eq 'Hash') `
         -ConfigPackageHash:($configPackageMode -eq 'Hash') `
         -DataPackageHash:($dataPackageMode -eq 'Hash') `
