@@ -48,7 +48,7 @@
     function HashDirectory([string] $Path)
     {
         $hasher = [Security.Cryptography.HashAlgorithm]::Create($HashAlgorithm)
-        foreach ($file in (Get-ChildItem $Path -Recurse -Directory | ?{ $_.fullname -notmatch "\\clidriver\\?" } | Get-ChildItem -File -Exclude $HashExcludes))
+        foreach ($file in (Get-ChildItem $Path -Recurse -Exclude $HashExcludes -File))
         {
             $buffer = [array]::CreateInstance([byte], 1024)
             $stream = [IO.File]::OpenRead($file.FullName)
